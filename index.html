@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Quadro de tarefas</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0A1411">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+:root{--bg:#E6ECE8;--col:#D3DDD7;--card:#FFFFFF;--ink:#1B2B26;--mut:#5B6E66;--acc:#1F7A5C;--acc-ink:#FFFFFF;--danger:#B3402F;--line:#BFCCC5;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12201B;--col:#1B2E27;--card:#264037;--ink:#E6F0EA;--mut:#93ABA1;--acc:#4FC39A;--acc-ink:#0B1A14;--danger:#F08A78;--line:#2F4A40;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0A1411;--col:#111F1A;--card:#182A23;--ink:#E6F0EA;--mut:#8FA89D;--acc:#4FC39A;--acc-ink:#07140E;--danger:#F08A78;--line:#243A31;color-scheme:dark}
+:root[data-tema="azul"]{--bg:#0A0F1C;--col:#111A2E;--card:#18233D;--ink:#E4ECFA;--mut:#8FA0BF;--acc:#6FA8FF;--acc-ink:#07101F;--line:#26344F}
+:root[data-tema="roxo"]{--bg:#0F0B1A;--col:#181228;--card:#221A38;--ink:#EDE6FA;--mut:#A396C2;--acc:#B38CFF;--acc-ink:#140B26;--line:#33284F}
+:root[data-tema="brasa"]{--bg:#140A0A;--col:#211010;--card:#2C1818;--ink:#F6E9E6;--mut:#B89893;--acc:#FF8A6B;--acc-ink:#1F0A05;--line:#3F2222}
+:root[data-tema="preto"]{--bg:#000000;--col:#0E0E0F;--card:#1A1A1C;--ink:#F2F2F2;--mut:#9A9AA0;--acc:#F2B84B;--acc-ink:#1A1200;--line:#2A2A2D}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{height:100%;margin:0;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);font:15px/1.4 "Avenir Next","Segoe UI",system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+body.dnd{cursor:grabbing;user-select:none;-webkit-user-select:none}
+header{display:flex;align-items:center;gap:12px;padding:14px 16px 4px;flex-wrap:wrap}
+h1{margin:0;font-size:22px;font-weight:700;letter-spacing:-.01em;flex:1;min-width:160px}
+.hint{margin:0;padding:0 16px 8px;color:var(--mut);font-size:13px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.primary{background:var(--acc);color:var(--acc-ink);border:0;border-radius:8px;padding:8px 14px;font-weight:600}
+.ghostbtn{background:transparent;border:1px solid var(--line);border-radius:8px;padding:8px 14px}
+.board{flex:1;min-height:0;display:flex;gap:12px;padding:8px 16px 16px;overflow-x:auto;align-items:flex-start;-webkit-overflow-scrolling:touch}
+.empty{color:var(--mut)}
+.col{flex:none;width:280px;max-width:84vw;max-height:100%;display:flex;flex-direction:column;background:var(--col);border-radius:12px;padding:8px 0 8px}
+.col.dragging{opacity:.3}
+.head{display:flex;align-items:center;gap:4px;padding:0 8px 6px 4px}
+.grip{width:28px;height:32px;display:grid;place-items:center;color:var(--mut);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none;font-size:18px}
+.title{flex:1;min-width:0;background:transparent;border:1px solid transparent;border-radius:6px;padding:5px 6px;font:inherit;font-weight:700;color:inherit}
+.title:hover{border-color:var(--line)}
+.title:focus{background:var(--card);border-color:var(--acc)}
+.n{color:var(--mut);font-size:13px;min-width:1.4em;text-align:center}
+.x{background:transparent;border:0;border-radius:6px;color:var(--mut);height:32px;min-width:32px;font-size:18px;line-height:1}
+.x:hover{color:var(--danger)}
+.x.armed{color:var(--danger);font-size:13px;font-weight:700;padding:0 8px}
+.cards{display:flex;flex-direction:column;gap:8px;padding:2px 8px;overflow-y:auto;min-height:28px}
+.card{background:var(--card);border-radius:8px;padding:10px 12px;box-shadow:0 1px 0 var(--line);cursor:grab;white-space:pre-wrap;overflow-wrap:anywhere;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.card.dragging{opacity:.25}
+.card[data-p="alta"]{border-left:4px solid #E5604D}
+.card[data-p="media"]{border-left:4px solid #E6B84A}
+.card[data-p="baixa"]{border-left:4px solid #4FC39A}
+.tag{display:block;width:fit-content;font-size:12px;font-weight:700;margin-bottom:4px;color:var(--mut)}
+.card[data-p="alta"] .tag{color:#FF7A66}
+.card[data-p="media"] .tag{color:#F0C45A}
+.card[data-p="baixa"] .tag{color:#5FD3A8}
+.chip[data-f="alta"]::before,.chip[data-f="media"]::before,.chip[data-f="baixa"]::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.chip[data-f="alta"]::before{background:#E5604D}
+.chip[data-f="media"]::before{background:#E6B84A}
+.chip[data-f="baixa"]::before{background:#4FC39A}
+.themes{display:flex;gap:8px;align-items:center}
+.sw{width:26px;height:26px;padding:0;border-radius:50%;border:2px solid var(--line)}
+.sw[aria-pressed="true"]{border-color:var(--ink);box-shadow:0 0 0 2px var(--bg),0 0 0 4px var(--ink)}
+.sw[data-t="noite"]{background:#4FC39A}
+.sw[data-t="azul"]{background:#6FA8FF}
+.sw[data-t="roxo"]{background:#B38CFF}
+.sw[data-t="brasa"]{background:#FF8A6B}
+.sw[data-t="preto"]{background:#000;border-color:#555}
+.filters{display:flex;gap:6px;padding:0 16px 8px;flex-wrap:wrap}
+.chip{background:transparent;border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:13px}
+.chip[aria-pressed="true"]{background:var(--acc);color:var(--acc-ink);border-color:var(--acc);font-weight:600}
+.board[data-f="alta"] .card:not([data-p="alta"]),.board[data-f="media"] .card:not([data-p="media"]),.board[data-f="baixa"] .card:not([data-p="baixa"]),.board[data-f="sem"] .card:not([data-p=""]){display:none}
+label.pl{display:block;margin-top:10px;font-size:13px;color:var(--mut)}
+select{width:100%;box-sizing:border-box;margin-top:4px;padding:9px;border:1px solid var(--line);border-radius:8px;font:inherit;background:var(--bg);color:var(--ink)}
+.ghost{position:fixed;z-index:50;pointer-events:none;margin:0;transform:rotate(2deg);box-shadow:0 10px 24px rgba(0,0,0,.28);opacity:.96}
+.add{margin:6px 8px 0;background:transparent;border:0;border-radius:8px;text-align:left;padding:8px;color:var(--mut)}
+.add:hover{background:var(--line);color:var(--ink)}
+dialog{border:0;border-radius:14px;padding:16px;width:min(420px,92vw);background:var(--card);color:var(--ink);box-sizing:border-box}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+dialog h2{margin:0 0 10px;font-size:17px}
+textarea{width:100%;box-sizing:border-box;min-height:110px;resize:vertical;border:1px solid var(--line);border-radius:8px;padding:10px;font:inherit;background:var(--bg);color:var(--ink)}
+.row{display:flex;gap:8px;margin-top:12px}
+.row .sp{flex:1}
+.danger{color:var(--danger);border-color:var(--danger)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Quadro de tarefas</h1>
+  <div class="themes" role="group" aria-label="Cor do quadro">
+    <button type="button" class="sw" data-t="noite" aria-label="Verde noite"></button>
+    <button type="button" class="sw" data-t="azul" aria-label="Azul meia-noite"></button>
+    <button type="button" class="sw" data-t="roxo" aria-label="Roxo"></button>
+    <button type="button" class="sw" data-t="brasa" aria-label="Brasa"></button>
+    <button type="button" class="sw" data-t="preto" aria-label="Preto"></button>
+  </div>
+  <button class="primary" id="addCol" type="button">+ Coluna</button>
+</header>
+<p class="hint">Arraste cartões entre colunas. Use ⠿ para mover uma coluna. No celular, segure o cartão para arrastar.</p>
+<div class="filters" role="group" aria-label="Filtrar por prioridade">
+  <button type="button" class="chip" data-f="">Todas</button>
+  <button type="button" class="chip" data-f="alta">Alta</button>
+  <button type="button" class="chip" data-f="media">Média</button>
+  <button type="button" class="chip" data-f="baixa">Baixa</button>
+  <button type="button" class="chip" data-f="sem">Sem prioridade</button>
+</div>
+<main class="board" id="board"></main>
+
+<dialog id="dlg">
+  <h2 id="dlgTitle">Novo cartão</h2>
+  <textarea id="txt" placeholder="Descreva a tarefa" aria-label="Texto do cartão"></textarea>
+  <label class="pl" for="prio">Prioridade</label>
+  <select id="prio">
+    <option value="">Sem prioridade</option>
+    <option value="alta">Alta</option>
+    <option value="media">Média</option>
+    <option value="baixa">Baixa</option>
+  </select>
+  <div class="row">
+    <button type="button" class="ghostbtn danger" id="del">Excluir</button>
+    <span class="sp"></span>
+    <button type="button" class="ghostbtn" id="cancel">Cancelar</button>
+    <button type="button" class="primary" id="save">Salvar</button>
+  </div>
+</dialog>
+
+<script>
+const KEY = 'kanban-quadro-v1';
+const board = document.getElementById('board');
+const uid = () => Math.random().toString(36).slice(2, 9);
+const esc = s => s.replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+function seed() {
+  return { cols: [
+    { id: uid(), title: 'A fazer', cards: [
+      { id: uid(), text: 'Planejar a semana' },
+      { id: uid(), text: 'Responder e-mails pendentes' },
+      { id: uid(), text: 'Marcar consulta' } ] },
+    { id: uid(), title: 'Em andamento', cards: [
+      { id: uid(), text: 'Montar apresentação do projeto' } ] },
+    { id: uid(), title: 'Concluído', cards: [
+      { id: uid(), text: 'Pagar contas do mês' } ] }
+  ]};
+}
+function load() {
+  try { const r = localStorage.getItem(KEY); if (r) { const d = JSON.parse(r); if (d && Array.isArray(d.cols)) return d; } } catch (e) {}
+  return seed();
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+let S = load();
+const PL = { alta: 'Alta', media: 'Média', baixa: 'Baixa' };
+document.documentElement.dataset.tema = S.tema || 'noite';
+
+function render() {
+  board.dataset.f = S.f || '';
+  syncChips();
+  board.innerHTML = S.cols.map(c => `
+  <section class="col" data-col="${c.id}">
+    <div class="head">
+      <span class="grip" title="Arrastar coluna" aria-label="Arrastar coluna">⠿</span>
+      <input class="title" value="${esc(c.title)}" aria-label="Nome da coluna" maxlength="60">
+      <span class="n">${c.cards.length}</span>
+      <button class="x" type="button" data-act="delcol" aria-label="Excluir coluna">×</button>
+    </div>
+    <div class="cards">${c.cards.map(k => `<div class="card" data-card="${k.id}" data-p="${k.p || ''}">${k.p ? `<span class="tag">${PL[k.p]}</span>` : ''}${esc(k.text)}</div>`).join('')}</div>
+    <button class="add" type="button" data-act="addcard">+ Adicionar cartão</button>
+  </section>`).join('') || '<p class="empty">Nenhuma coluna ainda. Toque em + Coluna para começar.</p>';
+}
+
+/* ---------- ações ---------- */
+document.getElementById('addCol').onclick = () => {
+  const c = { id: uid(), title: 'Nova coluna', cards: [] };
+  S.cols.push(c); save(); render();
+  board.scrollLeft = board.scrollWidth;
+  const inp = board.querySelector(`[data-col="${c.id}"] .title`);
+  if (inp) { inp.focus(); inp.select(); }
+};
+
+board.addEventListener('click', e => {
+  if (moved) return;
+  const btn = e.target.closest('[data-act]');
+  const colEl = e.target.closest('.col');
+  if (btn && colEl) {
+    const col = S.cols.find(c => c.id === colEl.dataset.col);
+    if (btn.dataset.act === 'addcard') return openDlg(col, null);
+    if (btn.dataset.act === 'delcol') {
+      if (!col.cards.length || btn.classList.contains('armed')) {
+        S.cols = S.cols.filter(c => c !== col); save(); render();
+      } else {
+        btn.classList.add('armed'); btn.textContent = 'Excluir?';
+        setTimeout(() => { if (btn.isConnected) { btn.classList.remove('armed'); btn.textContent = '×'; } }, 3000);
+      }
+    }
+    return;
+  }
+  const cardEl = e.target.closest('.card');
+  if (cardEl && colEl) {
+    const col = S.cols.find(c => c.id === colEl.dataset.col);
+    openDlg(col, col.cards.find(k => k.id === cardEl.dataset.card));
+  }
+});
+
+board.addEventListener('change', e => {
+  if (!e.target.classList.contains('title')) return;
+  const col = S.cols.find(c => c.id === e.target.closest('.col').dataset.col);
+  col.title = e.target.value.trim() || 'Sem nome';
+  e.target.value = col.title; save();
+});
+board.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.classList.contains('title')) e.target.blur();
+});
+
+/* ---------- cor do quadro ---------- */
+document.querySelector('.themes').addEventListener('click', e => {
+  const b = e.target.closest('.sw'); if (!b) return;
+  S.tema = b.dataset.t;
+  document.documentElement.dataset.tema = S.tema;
+  save(); syncChips();
+});
+
+/* ---------- filtro por prioridade ---------- */
+function syncChips() {
+  document.querySelectorAll('.chip').forEach(b => b.setAttribute('aria-pressed', String((S.f || '') === b.dataset.f)));
+  document.querySelectorAll('.sw').forEach(b => b.setAttribute('aria-pressed', String((S.tema || 'noite') === b.dataset.t)));
+}
+document.querySelector('.filters').addEventListener('click', e => {
+  const b = e.target.closest('.chip'); if (!b) return;
+  S.f = b.dataset.f; save(); render();
+});
+
+/* ---------- diálogo do cartão ---------- */
+const dlg = document.getElementById('dlg'), txt = document.getElementById('txt'), delBtn = document.getElementById('del');
+let ctx = null;
+const prio = document.getElementById('prio');
+function openDlg(col, card) {
+  ctx = { col, card };
+  document.getElementById('dlgTitle').textContent = card ? 'Editar cartão' : 'Novo cartão';
+  txt.value = card ? card.text : '';
+  prio.value = card ? (card.p || '') : '';
+  delBtn.hidden = !card;
+  dlg.showModal(); txt.focus();
+}
+function saveCard() {
+  const v = txt.value.trim();
+  if (v) {
+    if (ctx.card) { ctx.card.text = v; ctx.card.p = prio.value; } else ctx.col.cards.push({ id: uid(), text: v, p: prio.value });
+    save(); render();
+  }
+  dlg.close();
+}
+document.getElementById('save').onclick = saveCard;
+document.getElementById('cancel').onclick = () => dlg.close();
+delBtn.onclick = () => { ctx.col.cards = ctx.col.cards.filter(k => k !== ctx.card); save(); render(); dlg.close(); };
+txt.addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) saveCard(); });
+
+/* ---------- arrastar e soltar (mouse e toque) ---------- */
+let press = null, drag = null, moved = false;
+
+board.addEventListener('pointerdown', e => {
+  if (e.button > 0 || e.target.closest('input,button')) return;
+  const grip = e.target.closest('.grip');
+  const el = grip ? grip.closest('.col') : e.target.closest('.card');
+  if (!el) return;
+  press = { el, type: grip ? 'col' : 'card', x: e.clientX, y: e.clientY, touch: e.pointerType === 'touch' && !grip, t: null };
+  if (press.touch) press.t = setTimeout(() => { if (press) begin(); }, 220);
+});
+
+document.addEventListener('pointermove', e => {
+  if (drag) { place(e.clientX, e.clientY); return; }
+  if (!press) return;
+  const dist = Math.hypot(e.clientX - press.x, e.clientY - press.y);
+  if (press.touch) { if (dist > 8) cancelPress(); }
+  else if (dist > 5) { press.x = e.clientX; press.y = e.clientY; begin(); }
+});
+document.addEventListener('pointerup', finish);
+document.addEventListener('pointercancel', finish);
+document.addEventListener('touchmove', e => { if (drag) e.preventDefault(); }, { passive: false });
+
+function cancelPress() { if (press) clearTimeout(press.t); press = null; }
+function finish() { cancelPress(); if (drag) end(); }
+
+function begin() {
+  const { el, type } = press;
+  clearTimeout(press.t);
+  const r = el.getBoundingClientRect();
+  const g = el.cloneNode(true);
+  g.classList.add('ghost');
+  g.style.width = r.width + 'px'; g.style.height = r.height + 'px';
+  document.body.appendChild(g);
+  drag = { el, type, g, ox: press.x - r.left, oy: press.y - r.top };
+  press = null;
+  el.classList.add('dragging');
+  document.body.classList.add('dnd');
+  place(drag.ox + r.left, drag.oy + r.top);
+}
+
+function place(x, y) {
+  const d = drag;
+  d.g.style.left = (x - d.ox) + 'px';
+  d.g.style.top = (y - d.oy) + 'px';
+  const bb = board.getBoundingClientRect();
+  if (x < bb.left + 40) board.scrollLeft -= 12;
+  else if (x > bb.right - 40) board.scrollLeft += 12;
+  if (d.type === 'col') {
+    const next = [...board.querySelectorAll('.col:not(.dragging)')]
+      .find(c => { const r = c.getBoundingClientRect(); return x < r.left + r.width / 2; });
+    board.insertBefore(d.el, next || null);
+  } else {
+    const col = [...board.querySelectorAll('.col')]
+      .find(c => { const r = c.getBoundingClientRect(); return x >= r.left && x <= r.right; });
+    if (!col) return;
+    const list = col.querySelector('.cards');
+    const next = [...list.querySelectorAll('.card:not(.dragging)')]
+      .find(c => { const r = c.getBoundingClientRect(); return y < r.top + r.height / 2; });
+    list.insertBefore(d.el, next || null);
+  }
+}
+
+function end() {
+  const d = drag; drag = null;
+  d.g.remove();
+  document.body.classList.remove('dnd');
+  const byId = {}, cards = {};
+  S.cols.forEach(c => { byId[c.id] = c; c.cards.forEach(k => cards[k.id] = k); });
+  S.cols = [...board.querySelectorAll('.col')].map(ce => {
+    const c = byId[ce.dataset.col];
+    c.cards = [...ce.querySelectorAll('.card')].map(k => cards[k.dataset.card]);
+    return c;
+  });
+  save(); render();
+  moved = true; setTimeout(() => { moved = false; }, 80);
+}
+
+render();
+if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {})); }
+</script>
+</body>
+</html>
